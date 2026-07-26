@@ -1,0 +1,1560 @@
+{
+  "name": "LUSSO BOOKING AGENT",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -96
+      ],
+      "id": "61b7326d-e7ce-457d-a0ff-1b2a37f7d4a2",
+      "name": "WhatsApp Trigger",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "{{ $json.messages[0].text.body }}",
+        "options": {
+          "systemMessage": "=You are Elara, a professional AI concierge for LUSSO HOTEL AND SUITES\n\nYou assist guests exclusively via WhatsApp with hotel reservations.\n\nTOOLS — NEVER MENTION TO GUEST\n\n- Get Rooms               → fetch room listings\n\n- Get Guests              → check if guest exists using whatsapp number\n\n- Add Guest               → register new guest\n\n- Create Reservation      → save new reservation\n\n- Get All Reservations    → to fetch ALL existing reservations\n\n- Get Reservations        → fetch guest reservations using whatsapp number\n\n- Update Reservation      → modify reservation dates\n\n- Cancel Reservation      → cancel a reservation\n\nCRITICAL RULES\n\n- Today's full date is: {{ $now.toFormat('dd MMMM yyyy') }}\n\n- You must use this exact year in all dates. Never use any other year until the user provides it.\n\n- Guest WhatsApp number is auto-provided. NEVER ask for it\n\n- On EVERY first message, run \"Get Guest\n\n- If \"Get Guests\" returns empty → guest is NEW →\n\n- MUST run STEP 4 registration before Create Reservation\n\n- NEVER assume age, gender, country. always ask\n\n- Always display rooms and reservations in numbered\n\n  format so guest can reply with a number to select\n\nSTEP 1 — MAIN MENU\n\n→ Whenever someone say hey helloo hi then instantly send this main menu\n\n\"Welcome to Lusso Hotel & Suites 🏨\n\nI'm Elara, your personal concierge.\n\n\n1️⃣ Browse Rooms\n\n2️⃣ My Reservations\n\n3️⃣ Create Reservation\n\n4️⃣ Update Reservation\n\n5️⃣ Cancel Reservation\"\n\n\nSTEP 2 — BROWSE ROOMS (Option 1 or 3)\n\n→ Ask ONCE in a single message:\n\n\"To find your perfect room, please share:\n\n- Check-in date\n\n- Check-out date\n\n- Number of guests\"\n\n\n→ Run \"Get All Reservations\" to fetch ALL existing reservations\n\n→ EXCLUDE any room where an existing reservation has:\n\n  check_in_date < requested check_out_date\n\n  AND check_out_date > requested check_in_date\n\n  AND status ≠ cancelled\n\n→ Show ONLY rooms that pass this date conflict check\n\n→ If guest provides all three in one message — proceed immediately\n\n→ If guest provides dates without year use current year from: {{ $now.toFormat('yyyy') }}\n\n→ NEVER ask for dates or guests again after receiving them\n\n→ Run \"Get Rooms\"\n\n→ Show ONLY rooms where status = available and max_guests >= number of guests\n\n→ Format each room as:\n\n   🏷 Room ID: R00X\n\n   🛏 Type: [type]\n\n   💰 Price: $X per night\n\n   👥 Max Guests: X\n\n\nSTEP 3 — ROOM SELECTION\n\n→ When guest sends a Room ID or room type:\n\n   • Treat as selection immediately\n\n   • Show reservation summary:\n\n\n\"📋 Reservation Summary:\n\n1️⃣ 🏷 Room: [type] ([room_id])\n\n   📅 Check-in: [date]\n\n   📅 Check-out: [date]\n\n   👥 Guests: [count]\n\n   💰 Total: $[price × nights]\"\n\n\n→ Immediately proceed to STEP 4\n\n\nSTEP 4 — ADD GUEST (IF NOT FOUND)\n\n\n→ Only runs if guest was NOT found in CRITICAL RULES check\n\n→ Ask in ONE single message:\n\n\"Before we confirm your reservation, I need a few details:\n\n- Full Name\n\n- Gender\n\n- Country\"\n\n\n→ Accept partial answers across messages\n\n→ Ask only for MISSING fields. Never repeat already collected fields\n\n→ Once ALL four collected → run \"Add Guest\"\n\n→ Proceed to STEP 5 immediately\n\n\nSTEP 5 — PAYMENT METHOD SELECTION\n\n→ Immediately after reservation summary (and registration if not registered):\n\n\n\"How would you like to pay?\n\n1️⃣ Pay Online (Stripe)\n\n2️⃣ Pay at Check-in\"\n\n\n→ Wait for guest reply, then set values:\n\n\nIf 1️⃣ Stripe selected:\n\n→ payment_method = stripe\n\n→ status = pending\n\n\nIf 2️⃣ Pay at Check-in selected:\n\n→ payment_method = pay_at_checkin\n\n→ status = confirmed\n\n\n→ THEN immediately run \"Create Reservation\" with ALL values\n\n\nSTEP 6 — RESERVATION CONFIRMATION\n\n\n→ After \"Create Reservation\" runs, reply with:\n\n\nIf Stripe:\n\n\"🔖 Reservation ID: [ID]\n\n🏨 Room: [type] ([room_id])\n\n📅 Check-in: [date]\n\n📅 Check-out: [date]\n\n👥 Guests: [count]\n\n💰 Total: $[amount]\n\n💳 Payment Method: Pay Online (Stripe)\n\n\nA secure payment link will be sent shortly.\n\nYour reservation is held for 30 minutes. ⏳\"\n\n\nIf Pay at Check-in:\n\n\"✅ Reservation Confirmed!\n\n\n🔖 Reservation ID: [ID]\n\n🏨 Room: [type] ([room_id])\n\n📅 Check-in: [date]\n\n📅 Check-out: [date]\n\n👥 Guests: [count]\n\n💰 Total: $[amount]\n\n💵 Payment Method: Pay at Check-in\n\n\nWe look forward to welcoming you! 🏨\"\n\n\nSTEP 7 — MY RESERVATIONS (Option 2)\n\n\n→ Run \"Get Guests\" If guest NOT registered:\n\n\"You don't have any reservations yet.\n\nWould you like to browse available rooms? 🏨\"\n\n\n→ If guest registered:\n\n→ Run \"Get Reservations\" using guest's whatsapp number\n\n→ If no reservations found → tell guest they have\n\n  no active reservations\n\n→ Display reservations as numbered list:\n\n  \"Here are your reservations:\n\n\n  1️⃣ [room_type] ([room_id])\n\n     📅 [check_in] → [check_out]\n\n     💰 $[total] | Status: [status]\n\n\n  2️⃣ [room_type] ([room_id])\n\n     📅 [check_in] → [check_out]\n\n     💰 $[total] | Status: [status]\"\n\n\n\nSTEP 8 — UPDATE RESERVATION (Option 4)\n\n\n→ Run \"Get Guests\" If guest NOT registered:\n\n\"You don't have any reservations to update.\n\nWould you like to make a new reservation? 🏨\"\n\n\n→ If guest registered:\n\n→ Run \"Get Reservations\" using guest's whatsapp number\n\n→ STRICTLY filter results — show ONLY reservations where:\n\n  payment_method ≠ stripe AND payment ≠ paid\n\n→ If no reservations match filter → reply:\n\n\"ℹ️ You have no reservations available to modify.\n\nReservations paid online cannot be updated.\n\nTo make changes, please cancel and create a new one. 🏨\"\n\n→ If matches found → display as numbered list:\n\n  \"Which reservation would you like to update?\n\n  (Showing only reservations eligible for modification)\n\n\n  1️⃣ [room_type] ([room_id])\n\n     📅 [check_in] → [check_out]\n\n     💰 $[total]\n\n\n  Reply with the number to update.\"\n\n\n→ Guest replies with number → match to reservation ID\n\n→ Ask for new check-in and check-out dates\n\n→ If guest provides dates without year use current year from: {{ $now.toFormat('yyyy') }}\n\n→ Recalculate total: new_nights × price_per_night\n\n→ Run \"Update Reservation\" with:\n\n  check_in_date, check_out_date, total_price updated\n\n→ NEVER show or allow update on stripe or paid reservations\n\n\nSTEP 9 — CANCEL RESERVATION (Option 5)\n\n\n→ Run \"Get Guests\" If guest NOT registered:\n\n\"You don't have any reservations to cancel.\n\nWould you like to make a new reservation? 🏨\"\n\n\n→ If guest registered:\n\n→ Run \"Get Reservations\" using guest's whatsapp number\n\n→ If no reservations found → tell guest they have\n\n  no active reservations\n\n→ Display reservations as numbered list:\n\n  \"Which reservation would you like to cancel?\n\n\n  1️⃣ [room_type] ([room_id])\n\n     📅 [check_in] → [check_out]\n\n     💰 $[total]\n\n\n  2️⃣ [room_type] ([room_id])\n\n     📅 [check_in] → [check_out]\n\n     💰 $[total]\n\n\n  Reply with the number to cancel.\"\n\n\n→ Guest replies with number → match to reservation ID\n\n→ Run \"Cancel Reservation\" with matched reservation ID\n\n→ Reply:\n\n\"✅ Your reservation has been cancelled.\n\nIf you paid online, a refund will be processed\n\nwithin 5-7 business days. 💰\"\n\n\n\nTONE & STYLE\n\n\n- Warm, professional, concierge-level service\n\n- Short and clear messages — no walls of text\n\n- Use emojis sparingly but effectively\n\n- Never sound robotic or repeat yourself"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        880,
+        -96
+      ],
+      "id": "baacc2bb-e2b0-4a69-848f-2915300bea7b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        240
+      ],
+      "id": "de82c826-8508-43a1-8857-cd72e14b4ceb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "{{$json.sessionId}}",
+        "contextWindowLength": 9
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        128,
+        368
+      ],
+      "id": "ffd1a8e2-6765-4168-87ee-4dcc124617b5",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "YOUR_RECIPIENT_PHONE",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1728,
+        -96
+      ],
+      "id": "d8c35ef1-95fa-4de6-bd74-d152a097e70f",
+      "name": "Send message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 139590665,
+          "mode": "list",
+          "cachedResultName": "ROOMS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=139590665"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        272,
+        432
+      ],
+      "id": "d88385e2-59fc-4447-82dd-d6f1d46ec6d1",
+      "name": "GET ROOMS",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 887782028,
+          "mode": "list",
+          "cachedResultName": "GUEST",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=887782028"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "whatsapp_number",
+              "lookupValue": "={{ $json.contacts[0].wa_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        448
+      ],
+      "id": "b3e59138-49e2-4378-a1d7-11eb92d056f1",
+      "name": "GET GUEST",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "whatsapp_number",
+              "lookupValue": "={{ $json.contacts[0].wa_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        544,
+        480
+      ],
+      "id": "594bec8c-caa5-470e-aa2f-738ab749309a",
+      "name": "GET RESERVATION",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        416
+      ],
+      "id": "60e5c252-a5f4-4831-a091-8727f58b2d9d",
+      "name": "GET ALL RESERVATION",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "whatsapp_number": "={{ $json.contacts[0].wa_id }}",
+            "guests_count": "={{ $fromAI('guests_count', ``, 'string') }}",
+            "reservation_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('reservation_id', ``, 'string') }}",
+            "guest_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('guest_id', ``, 'string') }}",
+            "room_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('room_id', ``, 'string') }}",
+            "check_in_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('check_in_date', ``, 'string') }}",
+            "check_out_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('check_out_date', ``, 'string') }}",
+            "total_price": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('total_price', ``, 'string') }}",
+            "payment": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payment', ``, 'string') }}",
+            "status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('status', ``, 'string') }}",
+            "created_at": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('created_at', ``, 'string') }}",
+            "stripe_payment_intent": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('stripe_payment_intent', ``, 'string') }}",
+            "payment_method": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payment_method', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "reservation_id",
+              "displayName": "reservation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "guest_id",
+              "displayName": "guest_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "room_id",
+              "displayName": "room_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp_number",
+              "displayName": "whatsapp_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_in_date",
+              "displayName": "check_in_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_out_date",
+              "displayName": "check_out_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "guests_count",
+              "displayName": "guests_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_price",
+              "displayName": "total_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment",
+              "displayName": "payment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stripe_payment_intent",
+              "displayName": "stripe_payment_intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1360,
+        400
+      ],
+      "id": "550bdf25-78d3-4f55-a764-8a72da8f57c3",
+      "name": "CREATE RESERVATION",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "reservation_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('reservation_id', ``, 'string') }}",
+            "guest_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('guest_id', ``, 'string') }}",
+            "room_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('room_id', ``, 'string') }}",
+            "whatsapp_number": "={{ $json.contacts[0].wa_id }}",
+            "check_out_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('check_out_date', ``, 'string') }}",
+            "check_in_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('check_in_date', ``, 'string') }}",
+            "guests_count": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('guests_count', ``, 'string') }}",
+            "total_price": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('total_price', ``, 'string') }}",
+            "payment": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payment', ``, 'string') }}",
+            "payment_method": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payment_method', ``, 'string') }}",
+            "status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('status', ``, 'string') }}",
+            "created_at": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('created_at', ``, 'string') }}",
+            "stripe_payment_intent": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('stripe_payment_intent', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "reservation_id",
+              "displayName": "reservation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "guest_id",
+              "displayName": "guest_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "room_id",
+              "displayName": "room_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp_number",
+              "displayName": "whatsapp_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_in_date",
+              "displayName": "check_in_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_out_date",
+              "displayName": "check_out_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "guests_count",
+              "displayName": "guests_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_price",
+              "displayName": "total_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment",
+              "displayName": "payment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stripe_payment_intent",
+              "displayName": "stripe_payment_intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        384
+      ],
+      "id": "7b20fd43-ff5c-406e-8dd4-64538b7ff758",
+      "name": "ADD GUEST",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "reservation_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('reservation_id__using_to_match_', ``, 'string') }}",
+            "guest_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('guest_id', ``, 'string') }}",
+            "room_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('room_id', ``, 'string') }}",
+            "whatsapp_number": "={{ $json.contacts[0].wa_id }}",
+            "check_in_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('check_in_date', ``, 'string') }}",
+            "check_out_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('check_out_date', ``, 'string') }}",
+            "guests_count": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('guests_count', ``, 'string') }}",
+            "total_price": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('total_price', ``, 'string') }}",
+            "payment": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payment', ``, 'string') }}",
+            "payment_method": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payment_method', ``, 'string') }}",
+            "status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('status', ``, 'string') }}",
+            "created_at": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('created_at', ``, 'string') }}",
+            "stripe_payment_intent": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('stripe_payment_intent', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "reservation_id"
+          ],
+          "schema": [
+            {
+              "id": "reservation_id",
+              "displayName": "reservation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "guest_id",
+              "displayName": "guest_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "room_id",
+              "displayName": "room_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp_number",
+              "displayName": "whatsapp_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_in_date",
+              "displayName": "check_in_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_out_date",
+              "displayName": "check_out_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "guests_count",
+              "displayName": "guests_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_price",
+              "displayName": "total_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment",
+              "displayName": "payment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stripe_payment_intent",
+              "displayName": "stripe_payment_intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1696,
+        352
+      ],
+      "id": "90df2c12-b19d-4624-908c-b9f083ca018a",
+      "name": "UPDATE RESERVATIONS",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "reservation_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('reservation_id__using_to_match_', ``, 'string') }}",
+            "status": "=Cancelled"
+          },
+          "matchingColumns": [
+            "reservation_id"
+          ],
+          "schema": [
+            {
+              "id": "reservation_id",
+              "displayName": "reservation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "guest_id",
+              "displayName": "guest_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "room_id",
+              "displayName": "room_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_number",
+              "displayName": "whatsapp_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "check_in_date",
+              "displayName": "check_in_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "check_out_date",
+              "displayName": "check_out_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "guests_count",
+              "displayName": "guests_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "total_price",
+              "displayName": "total_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "payment",
+              "displayName": "payment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "stripe_payment_intent",
+              "displayName": "stripe_payment_intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1856,
+        272
+      ],
+      "id": "a6c7fb70-07ed-40d5-b655-53ac55bbc1cf",
+      "name": "CANCEL RESERVATION",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1056
+      ],
+      "id": "8cf0df4c-9d90-496b-88ea-5ac96054725b",
+      "name": "Stripe payment Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e489cd5c-994c-412a-b6fb-c170b876c2f8",
+              "leftValue": "={{ $json.payment_method }}",
+              "rightValue": "Stripe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "111f5939-6cf9-41ac-abef-d9c856f056ee",
+              "leftValue": "={{ $json.payment_method }}",
+              "rightValue": "Stripe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        1056
+      ],
+      "id": "fed6f0b1-afa6-4651-9696-c435f106c590",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stripe.com/v1/checkout/sessions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content- Type",
+              "value": "application/x-www-for-urlencoded"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_STRIPE_SECRET_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "metadata[reservationid]",
+              "value": "={{ $('Stripe payment Trigger').item.json.reservation_id }}"
+            },
+            {
+              "name": "lines_items[0][quantity]",
+              "value": "1"
+            },
+            {
+              "name": "lines_items[0][price_data][product_data][Name]",
+              "value": "Hotel Reservation"
+            },
+            {
+              "name": "lines_items[0][price_data][product_data][Unit_amount]",
+              "value": "={{ $('Stripe payment Trigger').item.json.total_price }}"
+            },
+            {
+              "name": "lines_items[0][price_data][product_data][currency]",
+              "value": "Naira"
+            },
+            {
+              "name": "Mode",
+              "value": "Payment"
+            },
+            {
+              "name": "success_url",
+              "value": "http:/wa.me/2349130885547"
+            },
+            {
+              "name": "cancel_url",
+              "value": "http:/wa.me/2349130885547"
+            },
+            {
+              "name": "metadata[whatsappNo]",
+              "value": "={{ $('Stripe payment Trigger').item.json.whatsapp_number }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        960
+      ],
+      "id": "45715df9-2833-46d9-95c6-bd0beb20306f",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "YOUR_RECIPIENT_PHONE",
+        "textBody": "=Please complete your payment using the link below{{ $('Stripe payment Trigger').item.json.payment }} once your payment is confirmed your reservation will be finalised.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        960
+      ],
+      "id": "f9af2a73-0130-4bf3-8ee2-6b1796d4bbb2",
+      "name": "Payment link message",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "events": [
+          "payment_intent.canceled"
+        ]
+      },
+      "type": "n8n-nodes-base.stripeTrigger",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        944
+      ],
+      "id": "5bbef01c-dc87-47a7-b825-f88566049c9d",
+      "name": "Payment verification Triger",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "url": "https://api.stripe.com/v1/checkout/sessions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content- Type",
+              "value": "application/x-www-for-urlencoded"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_STRIPE_SECRET_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1520,
+        928
+      ],
+      "id": "bb4c2310-d359-40eb-848c-39c3d9c27967",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Hotel Reservation1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RESERVATION",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [
+            "reservation_id"
+          ],
+          "schema": [
+            {
+              "id": "reservation_id",
+              "displayName": "reservation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "guest_id",
+              "displayName": "guest_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "room_id",
+              "displayName": "room_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "whatsapp_number",
+              "displayName": "whatsapp_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_in_date",
+              "displayName": "check_in_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "check_out_date",
+              "displayName": "check_out_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "guests_count",
+              "displayName": "guests_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_price",
+              "displayName": "total_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment",
+              "displayName": "payment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stripe_payment_intent",
+              "displayName": "stripe_payment_intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        928
+      ],
+      "id": "916e4612-e4dc-46c7-8310-3cbff6293ee8",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET ROOMS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET GUEST": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET RESERVATION": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET ALL RESERVATION": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CREATE RESERVATION": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ADD GUEST": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE RESERVATIONS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CANCEL RESERVATION": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe payment Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Payment link message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment verification Triger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "150a2d54-de11-48a7-8084-5de377a225a3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "48077f3cccaa72c9a001df90fd6c5bd8be0dc8142826ee89986b3e40ed8f29b9"
+  },
+  "nodeGroups": [],
+  "id": "YOUR_CREDENTIAL_ID",
+  "tags": []
+}
